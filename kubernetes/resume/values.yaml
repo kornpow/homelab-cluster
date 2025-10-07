@@ -16,6 +16,10 @@ imagePullSecrets:
 nameOverride: ""
 fullnameOverride: ""
 
+labels:
+  annotations:
+    reloader.stakater.com/match: "true"
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: false
@@ -27,7 +31,9 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
-podAnnotations: {}
+podAnnotations:
+  configmap.reloader.stakater.com/reload: "nginx-html"
+
 podLabels: {}
 
 podSecurityContext: {}
