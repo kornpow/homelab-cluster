@@ -1,5 +1,5 @@
 # k3s-agent.pkr.hcl — Builds a Proxmox VM template with k3s agent pre-installed.
-# Uses Debian 12 (Bookworm) as the base OS with cloud-init for first-boot config.
+# Uses Debian 13 (Trixie) as the base OS with cloud-init for first-boot config.
 
 source "proxmox-iso" "k3s-agent" {
   # ── Proxmox connection ───────────────────────
@@ -12,11 +12,13 @@ source "proxmox-iso" "k3s-agent" {
   # ── VM settings ──────────────────────────────
   vm_id                = var.agent_template_id
   vm_name              = "k3s-agent-template"
-  template_description = "k3s agent node — Debian 12 — built ${local.timestamp}"
+  template_description = "k3s agent node — Debian 13 — built ${local.timestamp}"
 
-  iso_file     = var.iso_file
-  iso_checksum = var.iso_checksum
-  unmount_iso  = true
+  boot_iso {
+    iso_file         = var.iso_file
+    iso_checksum     = var.iso_checksum
+    unmount          = true
+  }
 
   qemu_agent = true
   os         = "l26"

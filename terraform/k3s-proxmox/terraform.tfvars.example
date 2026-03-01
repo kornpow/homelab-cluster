@@ -2,11 +2,21 @@
 # Copy to terraform.tfvars and fill in your values.
 # terraform.tfvars is gitignored — never commit secrets.
 
+# ── 1Password (recommended) ─────────────────
+# API tokens are fetched from 1Password at plan/apply time.
+# Requires the 1Password desktop app with "Integrate with other apps" enabled.
+# Set OP_ACCOUNT env var or uncomment below.
+# op_account    = "my.1password.com"   # or run: op account get
+op_vault      = "lightning-spore"
+op_item_title = "Proxmox - spore-nuc"    # 1Password item with "API Token ID" + "API Token Secret" fields
+
 # ── Proxmox connection ───────────────────────
-proxmox_api_url          = "https://pve.example.com:8006/api2/json"
-proxmox_api_token_id     = "terraform@pam!terraform-token"
-proxmox_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+proxmox_api_url          = "https://10.0.0.219:8006/api2/json"
 proxmox_node             = "pve"
+
+# Manual token override (only needed if NOT using 1Password):
+# proxmox_api_token_id     = "root@pam!terraform-token"
+# proxmox_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
 # ── VM templates (built by Packer) ───────────
 server_template_id = 9000

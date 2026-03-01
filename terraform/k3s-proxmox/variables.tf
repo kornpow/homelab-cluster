@@ -1,4 +1,25 @@
 # ──────────────────────────────────────────────
+# 1Password (secrets source)
+# ──────────────────────────────────────────────
+variable "op_account" {
+  type        = string
+  default     = ""
+  description = "1Password account name or ID (from `op account get`). Can also set OP_ACCOUNT env var."
+}
+
+variable "op_vault" {
+  type        = string
+  default     = "lightning-spore"
+  description = "1Password vault name containing Proxmox credentials"
+}
+
+variable "op_item_title" {
+  type        = string
+  default     = "Proxmox - spore-nuc"
+  description = "Title of the 1Password item containing 'API Token ID' and 'API Token Secret' fields"
+}
+
+# ──────────────────────────────────────────────
 # Proxmox connection
 # ──────────────────────────────────────────────
 variable "proxmox_api_url" {
@@ -8,13 +29,15 @@ variable "proxmox_api_url" {
 
 variable "proxmox_api_token_id" {
   type        = string
-  description = "API token ID (e.g. terraform@pam!terraform-token)"
+  default     = ""
+  description = "API token ID (e.g. root@pam!terraform-token). Not needed if using 1Password."
 }
 
 variable "proxmox_api_token_secret" {
   type        = string
+  default     = ""
   sensitive   = true
-  description = "API token secret"
+  description = "API token secret. Not needed if using 1Password."
 }
 
 variable "proxmox_skip_tls_verify" {

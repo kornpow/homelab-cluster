@@ -16,17 +16,13 @@ These templates are then cloned by Terraform (see `terraform/k3s-proxmox/`) to c
 On your Proxmox host:
 
 ```bash
-# Create a dedicated user for automation
-pveum useradd packer@pam -comment "Packer automation"
-pveum passwd packer@pam
-
-# Create an API token (save the secret — it's shown only once)
-pveum user token add packer@pam packer-token --privsep=0
-
-# Grant permissions
-pveum aclmod / -user packer@pam -role PVEVMAdmin
-pveum aclmod /storage -user packer@pam -role PVEDatastoreUser
+# Create an API token on root (save the secret — it's shown only once)
+pveum user token add root@pam terraform-token --privsep=0
 ```
+
+This creates a token `root@pam!terraform-token` with full permissions. The same token works for both Packer and Terraform.
+
+See [`docs/proxmox-setup.md`](../../docs/proxmox-setup.md) for the full Proxmox setup guide including multi-host configuration and 1Password storage.
 
 ### Download the Debian 12 ISO
 
@@ -57,7 +53,7 @@ files/
 ```bash
 cp <<'EOF' > k3s-proxmox.pkrvars.hcl
 proxmox_api_url          = "https://your-proxmox-host:8006/api2/json"
-proxmox_api_token_id     = "packer@pam!packer-token"
+proxmox_api_token_id     = "root@pam!terraform-token"
 proxmox_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 proxmox_node             = "pve"
 iso_file                 = "local:iso/debian-12.9.0-amd64-netinst.iso"

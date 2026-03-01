@@ -1,5 +1,5 @@
 # k3s-server.pkr.hcl — Builds a Proxmox VM template with k3s server pre-installed.
-# Uses Debian 12 (Bookworm) as the base OS with cloud-init for first-boot config.
+# Uses Debian 13 (Trixie) as the base OS with cloud-init for first-boot config.
 
 source "proxmox-iso" "k3s-server" {
   # ── Proxmox connection ───────────────────────
@@ -12,11 +12,13 @@ source "proxmox-iso" "k3s-server" {
   # ── VM settings ──────────────────────────────
   vm_id                = var.server_template_id
   vm_name              = "k3s-server-template"
-  template_description = "k3s server node — Debian 12 — built ${local.timestamp}"
+  template_description = "k3s server node — Debian 13 — built ${local.timestamp}"
 
-  iso_file     = var.iso_file
-  iso_checksum = var.iso_checksum
-  unmount_iso  = true
+  boot_iso {
+    iso_file         = var.iso_file
+    iso_checksum     = var.iso_checksum
+    unmount          = true
+  }
 
   qemu_agent = true
   os         = "l26"

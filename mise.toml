@@ -1,0 +1,3 @@
+[tools]
+1password-cli = "2.32.1"
+packer = "latest"

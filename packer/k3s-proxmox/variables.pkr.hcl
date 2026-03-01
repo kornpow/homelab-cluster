@@ -17,7 +17,7 @@ variable "proxmox_api_url" {
 
 variable "proxmox_api_token_id" {
   type        = string
-  description = "API token ID (e.g. packer@pam!packer-token)"
+  description = "API token ID (e.g. root@pam!terraform-token)"
 }
 
 variable "proxmox_api_token_secret" {
@@ -58,8 +58,8 @@ variable "disk_storage_pool" {
 # ──────────────────────────────────────────────
 variable "iso_file" {
   type        = string
-  default     = "local:iso/debian-12-amd64-netinst.iso"
-  description = "Path to the Debian 12 ISO in Proxmox storage (e.g. local:iso/debian-12-amd64-netinst.iso)"
+  default     = "local:iso/debian-13.2.0-amd64-netinst.iso"
+  description = "Path to the Debian ISO in Proxmox storage (e.g. local:iso/debian-13.2.0-amd64-netinst.iso)"
 }
 
 variable "iso_checksum" {

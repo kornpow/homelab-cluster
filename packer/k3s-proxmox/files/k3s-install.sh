@@ -1,5 +1,5 @@
 #!/bin/bash
-# k3s-install.sh — Installs k3s and supporting tools on a Debian 12 Proxmox VM.
+# k3s-install.sh — Installs k3s and supporting tools on a Debian Proxmox VM.
 # Called by Packer during template build. Accepts one argument: "server" or "agent".
 set -euo pipefail
 

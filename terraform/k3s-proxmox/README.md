@@ -8,21 +8,44 @@ Supports two modes:
 
 ## Prerequisites
 
-- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
+- [OpenTofu](https://opentofu.org/docs/intro/install/) >= 1.5 (or Terraform >= 1.5)
 - Proxmox VE >= 8.0 with API token access
 - Packer-built VM templates (VM IDs 9000/9001 by default)
+- 1Password desktop app with "Integrate with other apps" enabled (Settings > Developer)
 - (Optional) [Tailscale auth key](https://login.tailscale.com/admin/settings/keys) for hybrid cluster networking
 - S3 backend configured (see `terraform/state-init/`)
 
-### Proxmox API Token for Terraform
+### Proxmox Host Setup
 
-```bash
-# On the Proxmox host
-pveum useradd terraform@pam -comment "Terraform automation"
-pveum user token add terraform@pam terraform-token --privsep=0
-pveum aclmod / -user terraform@pam -role PVEVMAdmin
-pveum aclmod /storage -user terraform@pam -role PVEDatastoreAdmin
-```
+See [`docs/proxmox-setup.md`](../../docs/proxmox-setup.md) for the full repeatable guide covering:
+- Proxmox VE installation
+- Post-install configuration
+- Multi-host clustering
+- API token creation
+- Storage and network setup
+
+### Secrets via 1Password
+
+API tokens are fetched from 1Password at plan/apply time using the [1Password Terraform provider](https://github.com/1Password/terraform-provider-onepassword). No secrets in tfvars files.
+
+**Setup:**
+
+1. Store your Proxmox API token in 1Password (see [docs/proxmox-setup.md § Store Tokens](../../docs/proxmox-setup.md#7-store-tokens-in-1password)):
+   - Item title: e.g. `Proxmox - spore-nuc`
+   - Fields: `API Token ID` and `API Token Secret`
+   - Vault: `lightning-spore`
+
+2. Enable app integration in 1Password:
+   - 1Password > Settings > Developer > "Integrate with other apps"
+
+3. Set your account (choose one):
+   ```bash
+   export OP_ACCOUNT="my.1password.com"   # env var
+   # or in terraform.tfvars:
+   # op_account = "my.1password.com"
+   ```
+
+When you run `tofu plan` or `tofu apply`, 1Password will prompt for biometric auth (Touch ID) to release the secrets.
 
 ## Usage
 
