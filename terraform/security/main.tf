@@ -175,6 +175,51 @@ resource "aws_iam_role_policy_attachment" "ec2_ecr_token_refresh" {
   policy_arn = aws_iam_policy.cluster_ecr_login_policy.arn
 }
 
+# Secrets Manager policy for syncing secrets to k3s
+resource "aws_iam_policy" "cluster_secrets_manager_policy" {
+  name        = "cluster_secrets_manager_policy"
+  path        = "/"
+  description = "Allows k3s cluster to read secrets from AWS Secrets Manager"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Effect   = "Allow"
+        Resource = aws_secretsmanager_secret.cloudflare_tunnel_token.arn
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_secrets_manager" {
+  role       = aws_iam_role.cluster_instance_role.name
+  policy_arn = aws_iam_policy.cluster_secrets_manager_policy.arn
+}
+
+# Cloudflare Tunnel Token Secret
+# NOTE: After creation, edit the secret value via AWS Console:
+# https://us-west-2.console.aws.amazon.com/secretsmanager/secret?name=cloudflare-tunnel-token
+resource "aws_secretsmanager_secret" "cloudflare_tunnel_token" {
+  name                    = "cloudflare-tunnel-token"
+  description             = "Cloudflare Tunnel token for k3s cluster"
+  recovery_window_in_days = 7
+
+  tags = {
+    Name = "cloudflare-tunnel-token"
+  }
+}
+
+# Create initial placeholder version - user will edit this via AWS Console
+resource "aws_secretsmanager_secret_version" "cloudflare_tunnel_token" {
+  secret_id     = aws_secretsmanager_secret.cloudflare_tunnel_token.id
+  secret_string = "PLACEHOLDER_EDIT_VIA_AWS_CONSOLE"
+}
+
 resource "aws_iam_instance_profile" "cluster_instance_profile" {
   name = "cluster_instance_profile"
   role = aws_iam_role.cluster_instance_role.name

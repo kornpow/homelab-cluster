@@ -1,0 +1,120 @@
+# Default values for cloudflare-tunnel
+# This is a YAML-formatted file.
+
+# Cloudflare account and tunnel configuration
+cloudflare:
+  # Your Cloudflare account ID (found in Cloudflare dashboard sidebar)
+  accountId: ""
+  
+  # Your Cloudflare tunnel ID (optional, auto-detected if using token)
+  tunnelId: ""
+  
+  # Reference to existing secret containing the tunnel token
+  # This secret is synced from AWS Secrets Manager via CronJob
+  existingSecret:
+    name: "cloudflare-tunnel-token"
+    key: "token"
+
+# Image configuration
+image:
+  repository: cloudflare/cloudflared
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+# Number of replicas (recommended: 2+ for high availability)
+replicaCount: 2
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Tunnel configuration
+tunnel:
+  # The ingress rules for your tunnel
+  # Format follows cloudflared config.yml spec
+  # Services inside your cluster should be accessible via cluster DNS
+  ingress:
+    # Example services - replace with your actual services
+    - hostname: "example.yourdomain.com"
+      service: "http://wordpress.wordpress.svc.cluster.local:80"
+    - hostname: "api.yourdomain.com"
+      service: "http://lnbits.lnbits.svc.cluster.local:3000"
+    # Catch-all rule (required)
+    - service: "http_status:404"
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity rules
+affinity: {}
+
+# Security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  runAsUser: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+# Service account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}
+
+# Liveness and readiness probes
+livenessProbe:
+  failureThreshold: 3
+  httpGet:
+    path: /ready
+    port: 2000
+    scheme: HTTP
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+
+readinessProbe:
+  failureThreshold: 3
+  httpGet:
+    path: /ready
+    port: 2000
+    scheme: HTTP
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+
+# Additional environment variables
+extraEnv: []
+# - name: HTTP_PROXY
+#   value: "http://proxy.example.com:8080"
+
+# Additional volumes
+extraVolumes: []
+
+# Additional volume mounts
+extraVolumeMounts: []

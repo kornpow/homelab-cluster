@@ -1,0 +1,34 @@
+# Cloudflare Tunnel values for deployment
+# Copy this file and customize for your environment
+
+cloudflare:
+  # Your Cloudflare tunnel ID (optional, shown in Cloudflare dashboard)
+  tunnelId: ""
+
+# Configure your services here
+tunnel:
+  ingress:
+    # WordPress - adjust hostname and service URL as needed
+    - hostname: "wordpress.YOUR_DOMAIN.com"
+      service: "http://wordpress.wordpress.svc.cluster.local:80"
+    
+    # LNBits - adjust hostname and service URL as needed  
+    - hostname: "lnbits.YOUR_DOMAIN.com"
+      service: "http://lnbits.lnbits.svc.cluster.local:3000"
+    
+    # Resume site - adjust hostname and service URL as needed
+    - hostname: "resume.YOUR_DOMAIN.com"
+      service: "http://resume.resume.svc.cluster.local:80"
+    
+    # Add more services as needed
+    # - hostname: "labelprinter.YOUR_DOMAIN.com"
+    #   service: "http://labelprinter.labelprinter.svc.cluster.local:80"
+    
+    # - hostname: "bostr.YOUR_DOMAIN.com"
+    #   service: "http://bostr.bostr.svc.cluster.local:80"
+    
+    # Catch-all rule (required) - returns 404 for unmatched hosts
+    - service: "http_status:404"
+
+# High availability - 2 replicas
+replicaCount: 2

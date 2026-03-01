@@ -1,0 +1,41 @@
+# Cloudflare Tunnel values for resume service only
+
+cloudflare:
+  # Your Cloudflare tunnel ID (shown in Cloudflare dashboard)
+  tunnelId: ""
+
+# Configure your services here
+tunnel:
+  ingress:
+    # Resume site
+    - hostname: "resume.todobest.me"
+      service: "http://resume.resume.svc.cluster.local:80"
+    
+    # Catch-all rule (required) - returns 404 for unmatched hosts
+    - service: "http_status:404"
+
+# High availability - 2 replicas
+replicaCount: 2
+
+# More lenient probes - tunnel needs time to connect
+livenessProbe:
+  failureThreshold: 5
+  httpGet:
+    path: /ready
+    port: 2000
+    scheme: HTTP
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 5
+
+readinessProbe:
+  failureThreshold: 3
+  httpGet:
+    path: /ready
+    port: 2000
+    scheme: HTTP
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  successThreshold: 1
+  timeoutSeconds: 3

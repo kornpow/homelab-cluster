@@ -1,0 +1,17 @@
+apiVersion: v2
+name: cloudflare-tunnel
+version: 0.1.0
+description: Cloudflare Tunnel for k3s cluster ingress
+type: application
+keywords:
+  - cloudflare
+  - tunnel
+  - ingress
+  - cloudflared
+home: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps
+sources:
+  - https://github.com/cloudflare/cloudflared
+maintainers:
+  - name: kornpow
+
+# Chart.yaml
