@@ -1,0 +1,9 @@
+# /etc/rancher/k3s/config.yaml — k3s server configuration
+# This file is placed by Packer and can be overridden at boot via cloud-init.
+write-kubeconfig-mode: "0644"
+tls-san:
+  - ${NODE_IP}
+  - ${TAILSCALE_IP}
+node-label:
+  - "instance=${NODE_LABEL}"
+  - "location=proxmox"

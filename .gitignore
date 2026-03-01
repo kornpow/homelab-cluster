@@ -1,4 +1,17 @@
+# Terraform
 *.tfvars
+!*.tfvars.example
 **/.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Packer
+*.pkrvars.hcl
+packer_cache/
+
+# Python
 **/__pycache__/
+
+# Application secrets
 kubernetes/lnbits/secrets/.env

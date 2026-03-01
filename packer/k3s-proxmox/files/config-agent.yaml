@@ -1,0 +1,7 @@
+# /etc/rancher/k3s/config.yaml — k3s agent configuration
+# This file is placed by Packer and can be overridden at boot via cloud-init.
+server: https://${K3S_SERVER_URL}:6443
+token: ${K3S_TOKEN}
+node-label:
+  - "instance=${NODE_LABEL}"
+  - "location=proxmox"

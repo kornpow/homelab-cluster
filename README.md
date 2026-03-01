@@ -1,58 +1,258 @@
-# get-new-job-project
+# k3s Hybrid Cluster Infrastructure
 
+Infrastructure-as-code for a hybrid k3s Kubernetes cluster spanning AWS EC2, Proxmox VMs, and on-premises hardware. Manages cluster provisioning (Packer + Terraform), application deployments (Helm), and supporting infrastructure (DNS, TLS, secrets, container registry).
 
-## Kubernetes
+## Architecture
 
-### Install application into cluster
+```
+                        ┌──────────────────────────────────────────────┐
+                        │              Tailscale Mesh VPN              │
+                        └──┬──────────────┬───────────────┬────────────┘
+                           │              │               │
+              ┌────────────┴──┐    ┌──────┴────────┐   ┌──┴──────────────┐
+              │  AWS us-west-2 │    │  Proxmox VMs  │   │  On-Prem Hosts  │
+              │               │    │               │   │                 │
+              │  server-1     │    │  agent-1      │   │  beelink1       │
+              │  server-2     │    │  agent-2      │   │  beelink2       │
+              │               │    │  agent-3      │   │  laptop         │
+              └───────┬───────┘    └───────┬───────┘   │  ai-box         │
+                      │                    │           └────────┬────────┘
+                      └────────────┬───────┘                    │
+                                   │                            │
+                        ┌──────────┴────────────────────────────┘
+                        │           k3s Cluster
+                        │  ┌─────────────────────────────┐
+                        │  │  Traefik Ingress             │
+                        │  │  Cloudflare Tunnel           │
+                        │  │  cert-manager (Let's Encrypt) │
+                        │  │  ECR image sync              │
+                        │  └─────────────────────────────┘
+                        │  ┌─────────────────────────────┐
+                        │  │  Applications                │
+                        │  │  resume, lnbits, wordpress,  │
+                        │  │  home-assistant, labelprinter,│
+                        │  │  webhook, pixel-promo, etc.  │
+                        │  └─────────────────────────────┘
+                        └───────────────────────────────────
+```
+
+## Repository Structure
+
+```
+.
+├── packer/
+│   ├── k3s-cluster/        # AWS AMI templates (Ubuntu 22.04 ARM64)
+│   └── k3s-proxmox/        # Proxmox VM templates (Debian 12 amd64)
+├── terraform/
+│   ├── state-init/          # S3 backend bootstrap
+│   ├── security/            # AWS security groups, IAM roles, secrets
+│   ├── k3s-node/            # AWS EC2 k3s server instances
+│   └── k3s-proxmox/         # Proxmox k3s server + agent VMs
+├── kubernetes/
+│   ├── namespaces/          # Namespace definitions
+│   ├── traefik/             # Ingress controller config
+│   ├── cloudflare-tunnel/   # Cloudflare Tunnel (alt ingress)
+│   ├── cert-manager/        # TLS certificate issuers
+│   ├── letencrypt/          # Let's Encrypt issuer setup
+│   ├── manifests/           # Cluster-level CronJobs (ECR login, secrets sync)
+│   ├── helpers/             # Debug pod
+│   ├── resume/              # Personal resume site (Helm)
+│   ├── lnbits/              # Lightning Network payments (Helm)
+│   ├── wordpress/           # WordPress sites (Helm, Bitnami)
+│   ├── home-assistant/      # Home automation (Helm)
+│   ├── labelprinter/        # Label printer app (Helm)
+│   ├── webhook/             # LightningSpore webhook (Helm)
+│   ├── pixel-promo/         # Pixel ad board (Helm)
+│   ├── coracle/             # Nostr client (Helm)
+│   └── bostr/               # Nostr bouncer (Helm)
+├── docker/
+│   ├── ecr-login/           # ECR + kubectl image (for CronJobs)
+│   └── debugger/            # Debug container image
+└── scripts/
+    └── create-kubeconfig.sh # Fetch kubeconfig from server
+```
+
+## Prerequisites
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| Terraform >= 1.5 | Infrastructure provisioning | [hashicorp.com](https://developer.hashicorp.com/terraform/install) |
+| Packer >= 1.10 | VM template building | [hashicorp.com](https://developer.hashicorp.com/packer/install) |
+| Helm >= 3 | Kubernetes package management | [helm.sh](https://helm.sh/docs/intro/install/) |
+| kubectl | Kubernetes CLI | [kubernetes.io](https://kubernetes.io/docs/tasks/tools/) |
+| AWS CLI v2 | AWS resource management | [aws.amazon.com](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) |
+| docker buildx | Multi-arch container builds | [docker.com](https://docs.docker.com/build/install-buildx/) |
+
+**Accounts / access required:**
+- AWS account with credentials configured (`us-west-2`)
+- Proxmox VE server with API token (for Proxmox nodes)
+- Tailscale account (for hybrid cluster networking)
+- Cloudflare account (for tunnel-based ingress)
+- Domain names: `samkorn.me`, `samkorn.xyz`, `lightningspore.com`
+
+## Deployment Order
+
+### 1. Bootstrap Terraform State
+
 ```bash
-    # install resume app
-    cd kubernetes/resume
-    helm upgrade --install resume .
+cd terraform/state-init
+terraform init && terraform apply
 ```
+
+Creates the S3 bucket and DynamoDB table used by all other Terraform modules.
+
+### 2. Build VM Templates
+
+**AWS (existing):**
+```bash
+cd packer/k3s-cluster
+packer build k3s-server.pkr.hcl   # -> AMI: k3s-node-<timestamp>
+```
+
+**Proxmox (new):**
+```bash
+cd packer/k3s-proxmox
+cp terraform.tfvars.example k3s-proxmox.pkrvars.hcl  # edit with your Proxmox details
+packer init .
+packer build -var-file=k3s-proxmox.pkrvars.hcl k3s-server.pkr.hcl   # -> VM template 9000
+packer build -var-file=k3s-proxmox.pkrvars.hcl k3s-agent.pkr.hcl    # -> VM template 9001
+```
+
+See [`packer/k3s-proxmox/README.md`](packer/k3s-proxmox/README.md) for full details.
+
+### 3. Provision Infrastructure
+
+**AWS security resources:**
+```bash
+cd terraform/security
+terraform init && terraform apply
+```
+
+**AWS k3s servers:**
+```bash
+cd terraform/k3s-node
+terraform init && terraform apply -var-file=terraform.tfvars
+```
+
+**Proxmox k3s nodes:**
+```bash
+cd terraform/k3s-proxmox
+cp terraform.tfvars.example terraform.tfvars   # edit with your values
+terraform init && terraform apply
+```
+
+See [`terraform/k3s-proxmox/README.md`](terraform/k3s-proxmox/README.md) for standalone vs. join-existing modes.
+
+### 4. Get Kubeconfig
 
 ```bash
-    # install labelprinter app
-    cd kubernetes/labelprinter
-    helm upgrade --install labelprinter .
+# From an AWS server
+./scripts/create-kubeconfig.sh
+
+# Or directly
+scp <server-ip>:/etc/rancher/k3s/k3s.yaml ~/.kube/config
+# Edit the server URL to match your server's public/Tailscale IP
 ```
 
-### Create config secrets
+### 5. Deploy Cluster Infrastructure
+
+```bash
+# Namespaces
+kubectl apply -f kubernetes/namespaces/
+
+# cert-manager + Let's Encrypt issuers
+kubernetes/letencrypt/enable.sh
+
+# Traefik configuration
+kubectl apply -f kubernetes/traefik/
+
+# ECR image pull secret rotation
+kubectl apply -f kubernetes/manifests/ecr-login.yaml
+
+# Cloudflare Tunnel (see its README for full setup)
+kubernetes/cloudflare-tunnel/deploy.sh
 ```
+
+### 6. Deploy Applications
+
+```bash
+# Example: deploy the resume site
+cd kubernetes/resume
+helm upgrade --install resume .
+
+# Example: deploy labelprinter
+cd kubernetes/labelprinter
+helm upgrade --install labelprinter .
+```
+
+See the `kubernetes/Makefile` for a full list of Helm install commands.
+
+## Creating k3s Nodes on Proxmox
+
+This is the most common operation for expanding the cluster. Full documentation:
+
+- **Build VM templates:** [`packer/k3s-proxmox/README.md`](packer/k3s-proxmox/README.md)
+- **Provision VMs:** [`terraform/k3s-proxmox/README.md`](terraform/k3s-proxmox/README.md)
+
+**Quick start (join existing cluster):**
+
+```bash
+# 1. Build templates (one-time)
+cd packer/k3s-proxmox
+packer init .
+packer build -var-file=k3s-proxmox.pkrvars.hcl k3s-server.pkr.hcl
+packer build -var-file=k3s-proxmox.pkrvars.hcl k3s-agent.pkr.hcl
+
+# 2. Provision VMs
+cd ../../terraform/k3s-proxmox
+cp terraform.tfvars.example terraform.tfvars
+
+# Edit terraform.tfvars:
+#   k3s_server_url    = "https://<tailscale-ip-of-existing-server>:6443"
+#   k3s_token         = "<from: sudo cat /var/lib/rancher/k3s/server/token>"
+#   tailscale_auth_key = "tskey-auth-..."
+#   server_count      = 0
+#   agent_count       = 3
+
+terraform init
+terraform apply
+
+# 3. Verify
+kubectl get nodes
+```
+
+## Application Secrets
+
+Secrets are created manually via `kubectl`. Replace paths below with your actual credential locations.
+
+```bash
+# nginx config
 kubectl create configmap nginx-config --from-file=nginx.conf
-```
 
-```
+# Resume content
 kubectl delete configmap resume-markdown
 kubectl create configmap resume-markdown --from-file=resume-app/RESUME.md
-
 kubectl create configmap nginx-html --from-file=public/index.html
-```
 
-```
-kubectl delete secret lnbits-env
-kubectl create secret generic lnbits-env --from-file=lnbits/secrets/.env
-
-kubectl delete secret lnd-creds
+# LNbits
+kubectl create secret generic lnbits-env --from-file=<path-to-lnbits>/.env
 kubectl create secret generic lnd-creds \
-    --from-file=/home/skorn/Documents/creds/kornpow-store/lnd/tls.cert \
-    --from-file=/home/skorn/Documents/creds/kornpow-store/lnd/admin.macaroon
-```
+    --from-file=<path-to-creds>/lnd/tls.cert \
+    --from-file=<path-to-creds>/lnd/admin.macaroon
 
-```
+# PostgreSQL
 kubectl create secret generic postgres-creds \
-    --from-literal=password=test123 \
-    --from-literal=postgres-password=superadmin123
+    --from-literal=password=<your-password> \
+    --from-literal=postgres-password=<your-admin-password>
+
+# App dotenv files
+kubectl create secret generic pixel-promo-dotenv --from-file=<path-to-app>/.env
+kubectl create secret generic webhook-dotenv --from-file=<path-to-app>/.env
 ```
 
-```
-kubectl create secret generic pixel-promo-dotenv \
-    --from-file=/Users/samkorn/Documents/repos/satoshis-ads/app/.env
+## Resources
 
-kubectl create secret generic webhook-dotenv \
-    --from-file=/Users/samkorn/Documents/repos/lightningspore-monorepo/lightningspore_code/webhook/.env
-```
-
-
-
-# Resources
-- git clone https://github.com/askblaker/k3s.rocks.git
+- [k3s.rocks](https://github.com/askblaker/k3s.rocks.git) — k3s reference architecture
+- [k3s docs](https://docs.k3s.io/) — Official k3s documentation
+- [bpg/proxmox Terraform provider](https://registry.terraform.io/providers/bpg/proxmox/latest/docs) — Proxmox Terraform provider docs
+- [Packer Proxmox builder](https://developer.hashicorp.com/packer/integrations/hashicorp/proxmox) — Packer Proxmox plugin docs
