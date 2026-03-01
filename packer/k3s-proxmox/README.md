@@ -1,14 +1,14 @@
 # Packer — k3s Proxmox VM Templates
 
-Builds Proxmox VM templates with k3s (server or agent) pre-installed on Debian 12 (Bookworm).
+Builds Proxmox VM templates with k3s (server or agent) pre-installed on Debian 13 (Trixie).
 
 These templates are then cloned by Terraform (see `terraform/k3s-proxmox/`) to create actual k3s cluster nodes.
 
 ## Prerequisites
 
-- [Packer](https://developer.hashicorp.com/packer/install) >= 1.10
-- Proxmox VE >= 8.0
-- Debian 12 netinst ISO uploaded to Proxmox storage (default: `local:iso/debian-12-amd64-netinst.iso`)
+- [Packer](https://developer.hashicorp.com/packer/install) >= 1.10 (installed via `mise`)
+- Proxmox VE >= 9.0
+- Debian 13 netinst ISO uploaded to Proxmox storage (default: `local:iso/debian-13.2.0-amd64-netinst.iso`)
 - A Proxmox API token with VM creation permissions
 
 ### Proxmox API Token Setup
@@ -24,12 +24,12 @@ This creates a token `root@pam!terraform-token` with full permissions. The same 
 
 See [`docs/proxmox-setup.md`](../../docs/proxmox-setup.md) for the full Proxmox setup guide including multi-host configuration and 1Password storage.
 
-### Download the Debian 12 ISO
+### Download the Debian 13 ISO
 
 ```bash
 # On the Proxmox host, download the ISO into the default storage
 cd /var/lib/vz/template/iso/
-wget https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-12.9.0-amd64-netinst.iso
+wget https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-13.2.0-amd64-netinst.iso
 ```
 
 ## Files
@@ -56,7 +56,7 @@ proxmox_api_url          = "https://your-proxmox-host:8006/api2/json"
 proxmox_api_token_id     = "root@pam!terraform-token"
 proxmox_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 proxmox_node             = "pve"
-iso_file                 = "local:iso/debian-12.9.0-amd64-netinst.iso"
+iso_file                 = "local:iso/debian-13.2.0-amd64-netinst.iso"
 EOF
 ```
 
@@ -118,3 +118,20 @@ k3s is installed but **stopped and disabled** — it gets configured and started
 | `disk_storage_pool` | `local-lvm` | Storage pool for VM disks |
 
 See `variables.pkr.hcl` for the full list.
+
+## Build Notes
+
+### Boot Order
+
+The Packer source blocks include `boot = "order=scsi0;ide2;net0"` to ensure the VM boots from the installed disk after the Debian installer reboots, rather than re-entering the ISO installer. Without this, the VM boots back into the ISO and Packer times out waiting for SSH.
+
+### Post-Install via Provisioners (Not `late_command`)
+
+Debian 13's preseed `late_command` is unreliable — commands involving `in-target systemctl enable` or file redirections frequently fail with "failed to run preseeded command." All post-install configuration (sudoers NOPASSWD, service enablement) is handled by a Packer shell provisioner that runs over SSH after the first boot, which is more reliable and easier to debug.
+
+### Harmless Warnings
+
+During the Packer build you may see:
+- **`debconf: unable to initialize frontend: Dialog`** — No TTY is available during SSH provisioning. Harmless.
+- **`Failed to stop/disable k3s-install.sh.service`** — The provisioning script does `sudo systemctl stop k3s*` which matches non-existent units. Harmless.
+- **`qemu-guest-agent enable` warning** — It auto-starts via udev/socket activation. Harmless.

@@ -18,6 +18,7 @@ Repeatable guide for setting up Proxmox VE hosts from bare metal through automat
 7. [Store Tokens in 1Password](#7-store-tokens-in-1password)
 8. [Upload ISO Images](#8-upload-iso-images)
 9. [Verify Setup](#9-verify-setup)
+10. [Appendix: Adding Proxmox VMs to an Existing k3s Cluster](#appendix-adding-proxmox-vms-to-an-existing-k3s-cluster)
 
 ---
 
@@ -25,7 +26,7 @@ Repeatable guide for setting up Proxmox VE hosts from bare metal through automat
 
 ### Download
 
-Get the latest Proxmox VE ISO from [proxmox.com/downloads](https://www.proxmox.com/en/downloads/proxmox-virtual-environment/iso). As of this writing, the latest is **PVE 8.x** (Debian 12 Bookworm based).
+Get the latest Proxmox VE ISO from [proxmox.com/downloads](https://www.proxmox.com/en/downloads/proxmox-virtual-environment/iso). As of this writing, the latest is **PVE 9.x** (Debian 13 Trixie based).
 
 ### Create bootable USB
 
@@ -69,8 +70,8 @@ SSH into each host and run:
 # Disable the enterprise repo (requires paid subscription)
 sed -i 's/^deb/# deb/' /etc/apt/sources.list.d/pve-enterprise.list
 
-# Add the no-subscription repo
-echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" > /etc/apt/sources.list.d/pve-no-subscription.list
+# Add the no-subscription repo (use 'trixie' for PVE 9.x, 'bookworm' for PVE 8.x)
+echo "deb http://download.proxmox.com/debian/pve trixie pve-no-subscription" > /etc/apt/sources.list.d/pve-no-subscription.list
 
 # Update and upgrade
 apt update && apt full-upgrade -y
@@ -295,7 +296,7 @@ curl -sk "https://10.0.0.120:8006/api2/json/version" \
 
 Expected response:
 ```json
-{"data":{"version":"8.x.x","release":"x.x",...}}
+{"data":{"version":"9.x.x","release":"x.x",...}}
 ```
 
 ### Test broader permissions
@@ -355,17 +356,17 @@ The Terraform module uses the `1password/onepassword` provider to fetch these at
 
 ## 8. Upload ISO Images
 
-Packer needs a Debian 12 netinst ISO on the Proxmox host's `local` storage.
+Packer needs a Debian 13 (Trixie) netinst ISO on the Proxmox host's `local` storage.
 
-### Download Debian 12 ISO
+### Download Debian 13 ISO
 
 On each Proxmox host (or just the one you'll build templates on):
 
 ```bash
 cd /var/lib/vz/template/iso/
 
-# Debian 12 (latest point release)
-wget https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-12.9.0-amd64-netinst.iso
+# Debian 13 (Trixie — latest point release)
+wget https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-13.2.0-amd64-netinst.iso
 ```
 
 ### Verify
@@ -403,7 +404,7 @@ ssh root@10.0.0.219 'pvesm status'
 # "local" should include "snippets" in content
 
 # 6. Debian ISO is present
-ssh root@10.0.0.219 'ls /var/lib/vz/template/iso/debian-12*'
+ssh root@10.0.0.219 'ls /var/lib/vz/template/iso/debian-13*'
 
 # 7. Cluster status (if clustered)
 ssh root@10.0.0.219 'pvecm status'
@@ -413,3 +414,159 @@ ssh root@10.0.0.219 'pvecm status'
 
 - Build VM templates with Packer: [`packer/k3s-proxmox/README.md`](../packer/k3s-proxmox/README.md)
 - Provision k3s VMs with Terraform: [`terraform/k3s-proxmox/README.md`](../terraform/k3s-proxmox/README.md)
+
+---
+
+## Appendix: Adding Proxmox VMs to an Existing k3s Cluster
+
+This section covers how to join Proxmox-provisioned VMs into an existing k3s cluster (e.g. one running on AWS EC2 or bare-metal hosts). The Terraform module handles this automatically via cloud-init, but understanding the mechanics is useful for debugging and manual operations.
+
+### How k3s Clustering Works
+
+k3s uses a **server/agent** architecture:
+
+- **Server nodes** run the control plane (API server, scheduler, controller manager, etcd). Multiple servers form an HA cluster.
+- **Agent nodes** run workloads only. They connect to a server's API on port 6443 to register and receive pod assignments.
+
+All nodes authenticate to the cluster using a shared **token** (a pre-shared secret). New nodes join by pointing at a server URL + providing the token.
+
+### What You Need to Join
+
+To add nodes to an existing cluster, you need three things:
+
+1. **k3s server URL** — the `https://<ip>:6443` address of an existing server node
+2. **k3s join token** — the cluster's shared secret
+3. **Network reachability** — the new node must be able to reach the server on port 6443
+
+#### Getting the join token
+
+SSH into any existing k3s **server** node and run:
+
+```bash
+sudo cat /var/lib/rancher/k3s/server/token
+```
+
+This returns a long string like `K10...::server:abc123...`. The entire string is the token.
+
+#### Getting the server URL
+
+If your cluster uses Tailscale, use the server's **Tailscale IP** (100.x.y.z) so that Proxmox agents can reach the server even across network boundaries:
+
+```bash
+# On the server node
+tailscale ip -4
+# e.g. 100.64.1.5
+
+# The server URL is:
+# https://100.64.1.5:6443
+```
+
+If all nodes are on the same LAN, use the server's LAN IP instead.
+
+### Joining via Terraform (Recommended)
+
+The Terraform module at `terraform/k3s-proxmox/` handles joining automatically. Set these variables in `terraform.tfvars`:
+
+```hcl
+# Point at your existing cluster
+k3s_server_url     = "https://100.64.1.5:6443"   # Tailscale IP of an existing server
+k3s_token          = "K10...::server:abc123..."   # from /var/lib/rancher/k3s/server/token
+
+# Tailscale key so the new VMs join your tailnet
+tailscale_auth_key  = "tskey-auth-..."
+
+# Only agents — servers already exist
+server_count = 0
+agent_count  = 3
+```
+
+Then run:
+
+```bash
+cd terraform/k3s-proxmox
+tofu init
+tofu apply
+```
+
+Cloud-init on each new VM will:
+1. Register with Tailscale (so it can reach the server via Tailscale IP)
+2. Run `curl -sfL https://get.k3s.io | K3S_URL=... K3S_TOKEN=... sh -s -` to install k3s in agent mode and join the cluster
+
+### Joining Manually (Without Terraform)
+
+If you need to join a node manually (e.g. an existing bare-metal machine):
+
+```bash
+# 1. Install Tailscale and join your tailnet
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up --authkey=tskey-auth-... --accept-routes --accept-dns=false
+
+# 2. Install k3s as an agent
+curl -sfL https://get.k3s.io | \
+  K3S_URL="https://100.64.1.5:6443" \
+  K3S_TOKEN="K10...::server:abc123..." \
+  INSTALL_K3S_EXEC="agent --node-label=instance=proxmox --node-label=location=proxmox" \
+  sh -s -
+
+# 3. Verify on the server
+kubectl get nodes
+```
+
+### Adding a Server Node (HA)
+
+To add a new **server** (not agent) to an existing HA cluster:
+
+```bash
+curl -sfL https://get.k3s.io | \
+  K3S_TOKEN="K10...::server:abc123..." \
+  K3S_KUBECONFIG_MODE="644" \
+  INSTALL_K3S_EXEC="server --server=https://100.64.1.5:6443 --node-label=instance=proxmox" \
+  sh -s -
+```
+
+Note the difference: agents use `K3S_URL`, servers use `--server=` in `INSTALL_K3S_EXEC`.
+
+### Verifying Cluster Membership
+
+From any server node:
+
+```bash
+# List all nodes
+kubectl get nodes -o wide
+
+# Check a specific node's status
+kubectl describe node k3s-agent-1
+
+# Verify the node is Ready and has the correct labels
+kubectl get nodes --show-labels | grep proxmox
+```
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Agent can't reach server on :6443 | Network/firewall issue | Check Tailscale is connected: `tailscale status` |
+| Node shows `NotReady` | k3s service not running | `sudo systemctl status k3s-agent` / check logs: `sudo journalctl -u k3s-agent -f` |
+| "token mismatch" error | Wrong join token | Re-read token from server: `sudo cat /var/lib/rancher/k3s/server/token` |
+| Node registered but no pods scheduled | Taints or resource constraints | Check taints: `kubectl describe node <name>` |
+| Tailscale not connecting | Auth key expired or wrong | Generate a new key from [Tailscale admin](https://login.tailscale.com/admin/settings/keys) |
+
+### Architecture: Hybrid Cluster with Tailscale
+
+```
+  AWS EC2 (us-west-2)                 Proxmox (on-prem)
+  ┌──────────────────┐               ┌──────────────────────┐
+  │ k3s-server-1     │◄──Tailscale──►│ k3s-agent-1 (VM)     │
+  │ k3s-server-2     │   mesh VPN    │ k3s-agent-2 (VM)     │
+  │                  │               │ k3s-agent-3 (VM)     │
+  └──────────────────┘               └──────────────────────┘
+         ▲                                    ▲
+         │              Tailscale             │
+         ▼                                    ▼
+  ┌──────────────────────────────────────────────┐
+  │  On-Prem Bare Metal                          │
+  │  beelink1, beelink2, laptop, ai-box          │
+  └──────────────────────────────────────────────┘
+```
+
+All inter-node traffic (kubelet ↔ API server, flannel VXLAN, etc.) flows over Tailscale's encrypted WireGuard tunnels. Nodes don't need to be on the same LAN or have public IPs — Tailscale handles NAT traversal.

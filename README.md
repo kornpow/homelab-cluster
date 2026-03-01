@@ -42,7 +42,7 @@ Infrastructure-as-code for a hybrid k3s Kubernetes cluster spanning AWS EC2, Pro
 .
 ├── packer/
 │   ├── k3s-cluster/        # AWS AMI templates (Ubuntu 22.04 ARM64)
-│   └── k3s-proxmox/        # Proxmox VM templates (Debian 12 amd64)
+│   └── k3s-proxmox/        # Proxmox VM templates (Debian 13 amd64)
 ├── terraform/
 │   ├── state-init/          # S3 backend bootstrap
 │   ├── security/            # AWS security groups, IAM roles, secrets
@@ -76,12 +76,16 @@ Infrastructure-as-code for a hybrid k3s Kubernetes cluster spanning AWS EC2, Pro
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| Terraform >= 1.5 | Infrastructure provisioning | [hashicorp.com](https://developer.hashicorp.com/terraform/install) |
-| Packer >= 1.10 | VM template building | [hashicorp.com](https://developer.hashicorp.com/packer/install) |
+| [mise](https://mise.jdx.dev/) | Tool version manager (manages all tools below) | [mise.jdx.dev](https://mise.jdx.dev/getting-started.html) |
+| OpenTofu >= 1.5 | Infrastructure provisioning | `mise install` (or [opentofu.org](https://opentofu.org/docs/intro/install/)) |
+| Packer >= 1.10 | VM template building | `mise install` (or [hashicorp.com](https://developer.hashicorp.com/packer/install)) |
+| 1Password CLI | Secret management | `mise install` (or [1password.com](https://developer.1password.com/docs/cli/get-started/)) |
 | Helm >= 3 | Kubernetes package management | [helm.sh](https://helm.sh/docs/intro/install/) |
 | kubectl | Kubernetes CLI | [kubernetes.io](https://kubernetes.io/docs/tasks/tools/) |
 | AWS CLI v2 | AWS resource management | [aws.amazon.com](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) |
 | docker buildx | Multi-arch container builds | [docker.com](https://docs.docker.com/build/install-buildx/) |
+
+> **Note:** Run `mise install` in the repo root to install Packer, 1Password CLI, and uv (Python) at the pinned versions from `mise.toml`.
 
 **Accounts / access required:**
 - AWS account with credentials configured (`us-west-2`)
@@ -96,7 +100,7 @@ Infrastructure-as-code for a hybrid k3s Kubernetes cluster spanning AWS EC2, Pro
 
 ```bash
 cd terraform/state-init
-terraform init && terraform apply
+tofu init && tofu apply
 ```
 
 Creates the S3 bucket and DynamoDB table used by all other Terraform modules.
@@ -125,20 +129,20 @@ See [`packer/k3s-proxmox/README.md`](packer/k3s-proxmox/README.md) for full deta
 **AWS security resources:**
 ```bash
 cd terraform/security
-terraform init && terraform apply
+tofu init && tofu apply
 ```
 
 **AWS k3s servers:**
 ```bash
 cd terraform/k3s-node
-terraform init && terraform apply -var-file=terraform.tfvars
+tofu init && tofu apply -var-file=terraform.tfvars
 ```
 
 **Proxmox k3s nodes:**
 ```bash
 cd terraform/k3s-proxmox
 cp terraform.tfvars.example terraform.tfvars   # edit with your values
-terraform init && terraform apply
+tofu init && tofu apply
 ```
 
 See [`terraform/k3s-proxmox/README.md`](terraform/k3s-proxmox/README.md) for standalone vs. join-existing modes.
@@ -214,8 +218,8 @@ cp terraform.tfvars.example terraform.tfvars
 #   server_count      = 0
 #   agent_count       = 3
 
-terraform init
-terraform apply
+tofu init
+tofu apply
 
 # 3. Verify
 kubectl get nodes

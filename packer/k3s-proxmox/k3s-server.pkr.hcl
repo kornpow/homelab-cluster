@@ -20,6 +20,7 @@ source "proxmox-iso" "k3s-server" {
     unmount          = true
   }
 
+  boot       = "order=scsi0;ide2;net0"
   qemu_agent = true
   os         = "l26"
 
@@ -63,6 +64,15 @@ source "proxmox-iso" "k3s-server" {
 
 build {
   sources = ["source.proxmox-iso.k3s-server"]
+
+  provisioner "shell" {
+    inline = [
+      "echo 'packer' | sudo -S sh -c 'echo \"debian ALL=(ALL) NOPASSWD: ALL\" > /etc/sudoers.d/debian && chmod 440 /etc/sudoers.d/debian'",
+      "sudo systemctl enable qemu-guest-agent || true",
+      "sudo apt-get install -y cloud-init || true",
+      "sudo systemctl enable cloud-init || true",
+    ]
+  }
 
   provisioner "file" {
     source      = "files/"

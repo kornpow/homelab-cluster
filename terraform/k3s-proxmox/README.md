@@ -9,7 +9,7 @@ Supports two modes:
 ## Prerequisites
 
 - [OpenTofu](https://opentofu.org/docs/intro/install/) >= 1.5 (or Terraform >= 1.5)
-- Proxmox VE >= 8.0 with API token access
+- Proxmox VE >= 9.0 with API token access
 - Packer-built VM templates (VM IDs 9000/9001 by default)
 - 1Password desktop app with "Integrate with other apps" enabled (Settings > Developer)
 - (Optional) [Tailscale auth key](https://login.tailscale.com/admin/settings/keys) for hybrid cluster networking
@@ -56,30 +56,30 @@ cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars with your Proxmox details, IPs, SSH keys, etc.
 ```
 
-### 2. Initialize Terraform
+### 2. Initialize
 
 ```bash
-terraform init
+tofu init
 ```
 
 ### 3. Plan and apply
 
 ```bash
-terraform plan
-terraform apply
+tofu plan
+tofu apply
 ```
 
 ### 4. Get cluster info
 
 ```bash
 # Server IPs
-terraform output server_ipv4_addresses
+tofu output server_ipv4_addresses
 
 # k3s join token (for manually adding more nodes)
-terraform output -raw k3s_token
+tofu output -raw k3s_token
 
 # Cluster mode
-terraform output cluster_mode
+tofu output cluster_mode
 ```
 
 ## Deployment Modes
