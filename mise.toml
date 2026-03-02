@@ -1,4 +1,6 @@
 [tools]
 1password-cli = "2.32.1"
+cloudflared = "latest"
+opentofu = "latest"
 packer = "latest"
 uv = "latest"

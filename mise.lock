@@ -1,0 +1,41 @@
+[[tools.1password-cli]]
+version = "2.32.1"
+backend = "vfox:1password-cli"
+"platforms.linux-arm64" = { url = "https://cache.agilebits.com/dist/1P/op2/pkg/v2.32.1/op_darwin_arm64_v2.32.1.zip"}
+"platforms.linux-x64" = { url = "https://cache.agilebits.com/dist/1P/op2/pkg/v2.32.1/op_darwin_arm64_v2.32.1.zip"}
+"platforms.macos-arm64" = { url = "https://cache.agilebits.com/dist/1P/op2/pkg/v2.32.1/op_darwin_arm64_v2.32.1.zip"}
+"platforms.macos-x64" = { url = "https://cache.agilebits.com/dist/1P/op2/pkg/v2.32.1/op_darwin_arm64_v2.32.1.zip"}
+"platforms.windows-x64" = { url = "https://cache.agilebits.com/dist/1P/op2/pkg/v2.32.1/op_darwin_arm64_v2.32.1.zip"}
+
+[[tools.cloudflared]]
+version = "2026.2.0"
+backend = "aqua:cloudflare/cloudflared"
+"platforms.macos-arm64" = { checksum = "sha256:685688a260c324eb8d9c9434ca22f0ce4f504fd6acd0706787c4833de8d6eb17", url = "https://github.com/cloudflare/cloudflared/releases/download/2026.2.0/cloudflared-darwin-amd64.tgz"}
+"platforms.macos-x64" = { checksum = "sha256:685688a260c324eb8d9c9434ca22f0ce4f504fd6acd0706787c4833de8d6eb17", url = "https://github.com/cloudflare/cloudflared/releases/download/2026.2.0/cloudflared-darwin-amd64.tgz"}
+
+[[tools.opentofu]]
+version = "1.11.5"
+backend = "aqua:opentofu/opentofu"
+"platforms.linux-arm64" = { checksum = "sha256:b31a2af2a99d49da6eb429cbbb5f4e8323f9c48d1aeb8c1294e4e5bdb5012416", url = "https://github.com/opentofu/opentofu/releases/download/v1.11.5/tofu_1.11.5_linux_arm64.tar.gz"}
+"platforms.linux-x64" = { checksum = "sha256:e73868ab8abaca15d3c974dcf6a5e878860d6f2212867433aa3d8f2b43a492d9", url = "https://github.com/opentofu/opentofu/releases/download/v1.11.5/tofu_1.11.5_linux_amd64.tar.gz"}
+"platforms.macos-arm64" = { checksum = "sha256:abf2be18c49b7b8338d4addc5f64bcf68b3af03ca860b414b3705c20c4b455a6", url = "https://github.com/opentofu/opentofu/releases/download/v1.11.5/tofu_1.11.5_darwin_arm64.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:f514761be893f49b6ca12c2df672c010fad6c88f92588dcfc95db750211c2594", url = "https://github.com/opentofu/opentofu/releases/download/v1.11.5/tofu_1.11.5_darwin_amd64.tar.gz"}
+"platforms.windows-x64" = { checksum = "sha256:69be358054afcc6a84c0ffb917056d21afc3ec5a0e0f66ffd4f498a1763a0fb8", url = "https://github.com/opentofu/opentofu/releases/download/v1.11.5/tofu_1.11.5_windows_amd64.tar.gz"}
+
+[[tools.packer]]
+version = "1.15.0"
+backend = "aqua:hashicorp/packer"
+"platforms.linux-arm64" = { checksum = "sha256:1687f43bd120601f62e54b970b1cc06f83e95897357dc5c679b57ec9d2fb40a7", url = "https://releases.hashicorp.com/packer/1.15.0/packer_1.15.0_linux_arm64.zip"}
+"platforms.linux-x64" = { checksum = "sha256:2fd1149c5c6c7604ced64d7b56638af05f6b7ed3f6835182bc913ddaba1f16b8", url = "https://releases.hashicorp.com/packer/1.15.0/packer_1.15.0_linux_amd64.zip"}
+"platforms.macos-arm64" = { checksum = "sha256:ebd8eb03503627471f39b036ff5dbb24070d21518d59aa8cbf962386257d21a4", url = "https://releases.hashicorp.com/packer/1.15.0/packer_1.15.0_darwin_arm64.zip"}
+"platforms.macos-x64" = { checksum = "sha256:a565b825aed17ac9a7c422b5ed22e6598dd42b9f705de161695853b1f5c6bd80", url = "https://releases.hashicorp.com/packer/1.15.0/packer_1.15.0_darwin_amd64.zip"}
+"platforms.windows-x64" = { checksum = "sha256:5cf875e39b5d4ad552dd0e6f52a6e46c6d0b6b0ee1f8104824445892febe58c6", url = "https://releases.hashicorp.com/packer/1.15.0/packer_1.15.0_windows_amd64.zip"}
+
+[[tools.uv]]
+version = "0.10.7"
+backend = "aqua:astral-sh/uv"
+"platforms.linux-arm64" = { checksum = "sha256:115291f9943531a3b63db3a2eabda8b74b8da4831551679382cb309c9debd9f7", url = "https://github.com/astral-sh/uv/releases/download/0.10.7/uv-aarch64-unknown-linux-musl.tar.gz"}
+"platforms.linux-x64" = { checksum = "sha256:992529add6024e67135b1c80617abd2eca7be2cf0b99b3911f923de815bd8dc1", url = "https://github.com/astral-sh/uv/releases/download/0.10.7/uv-x86_64-unknown-linux-musl.tar.gz"}
+"platforms.macos-arm64" = { checksum = "sha256:1eb4dcc5e0fc8669fa0b33cf1151b64ba3b8c26b60dceff4f7a686129e2af22b", url = "https://github.com/astral-sh/uv/releases/download/0.10.7/uv-aarch64-apple-darwin.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:4fed9d4f4608fb3850db714ee37244436f850a2b6e485bc510795679c2d08866", url = "https://github.com/astral-sh/uv/releases/download/0.10.7/uv-x86_64-apple-darwin.tar.gz"}
+"platforms.windows-x64" = { checksum = "sha256:8881afb877996a1373a12e816395122a8d39a3ac06cd066272acdb49510cf0fe", url = "https://github.com/astral-sh/uv/releases/download/0.10.7/uv-x86_64-pc-windows-msvc.zip"}
