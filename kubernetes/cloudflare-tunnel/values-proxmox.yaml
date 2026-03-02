@@ -1,0 +1,42 @@
+# Cloudflare Tunnel values for labelprinter ingress
+cloudflare:
+  accountId: ""  # Will be extracted from token
+  tunnelId: ""   # Will be extracted from token
+  existingSecret:
+    name: "cloudflare-tunnel-token"
+    key: "token"
+
+image:
+  repository: cloudflare/cloudflared
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+replicaCount: 1
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+tunnel:
+  ingress:
+    - hostname: "label.samkorn.xyz"
+      service: "http://labelprinter.default.svc.cluster.local:80"
+    - hostname: "samkorn.xyz"
+      service: "http://labelprinter.default.svc.cluster.local:80"
+    - service: "http_status:404"
+
+podDisruptionBudget:
+  enabled: false
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+  runAsUser: 65532

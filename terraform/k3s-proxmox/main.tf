@@ -22,8 +22,8 @@ locals {
   # Common k3s flags
   k3s_node_labels = "--node-label=instance=${var.node_label} --node-label=location=proxmox"
 
-  # Tailscale setup command
-  tailscale_cmd = var.tailscale_auth_key != "" ? "sudo tailscale up --authkey=${var.tailscale_auth_key} --accept-routes --accept-dns=false" : "echo 'Tailscale: no auth key provided, skipping auto-registration'"
+  # Tailscale setup command (use list form to avoid shell quoting issues in cloud-init)
+  tailscale_cmd = var.tailscale_auth_key != "" ? ["sudo", "tailscale", "up", "--authkey=${var.tailscale_auth_key}", "--accept-routes", "--accept-dns=false"] : ["echo", "Tailscale: no auth key provided, skipping auto-registration"]
 
   # Pre-compute the k3s install command for each server node
   server_k3s_cmd = [
@@ -119,15 +119,22 @@ resource "proxmox_virtual_environment_file" "cloud_config_server" {
   node_name    = var.proxmox_node
 
   source_raw {
-    data = <<-EOT
-#cloud-config
-hostname: k3s-server-${count.index + 1}
-package_update: true
-package_upgrade: true
-runcmd:
-  - ${local.tailscale_cmd}
-  - ${local.server_k3s_cmd[count.index]}
-EOT
+    data = join("\n", ["#cloud-config", yamlencode({
+      hostname         = "k3s-server-${count.index + 1}"
+      manage_etc_hosts = true
+      users = [{
+        name                = var.ssh_user
+        sudo                = "ALL=(ALL) NOPASSWD:ALL"
+        shell               = "/bin/bash"
+        ssh_authorized_keys = var.ssh_public_keys
+      }]
+      runcmd = [
+        # Wait for network connectivity before attempting downloads
+        ["bash", "-c", "for i in $(seq 1 30); do curl -sf --connect-timeout 3 https://get.k3s.io > /dev/null 2>&1 && break; echo \"Waiting for network ($i/30)...\"; sleep 2; done"],
+        local.tailscale_cmd,
+        ["bash", "-c", local.server_k3s_cmd[count.index]],
+      ]
+    })])
 
     file_name = "k3s-server-${count.index + 1}-cloud-init.yaml"
   }
@@ -209,15 +216,22 @@ resource "proxmox_virtual_environment_file" "cloud_config_agent" {
   node_name    = var.proxmox_node
 
   source_raw {
-    data = <<-EOT
-#cloud-config
-hostname: k3s-agent-${count.index + 1}
-package_update: true
-package_upgrade: true
-runcmd:
-  - ${local.tailscale_cmd}
-  - ${local.agent_k3s_cmd}
-EOT
+    data = join("\n", ["#cloud-config", yamlencode({
+      hostname         = "k3s-agent-${count.index + 1}"
+      manage_etc_hosts = true
+      users = [{
+        name                = var.ssh_user
+        sudo                = "ALL=(ALL) NOPASSWD:ALL"
+        shell               = "/bin/bash"
+        ssh_authorized_keys = var.ssh_public_keys
+      }]
+      runcmd = [
+        # Wait for network connectivity before attempting downloads
+        ["bash", "-c", "for i in $(seq 1 30); do curl -sf --connect-timeout 3 https://get.k3s.io > /dev/null 2>&1 && break; echo \"Waiting for network ($i/30)...\"; sleep 2; done"],
+        local.tailscale_cmd,
+        ["bash", "-c", local.agent_k3s_cmd],
+      ]
+    })])
 
     file_name = "k3s-agent-${count.index + 1}-cloud-init.yaml"
   }

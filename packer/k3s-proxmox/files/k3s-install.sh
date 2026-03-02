@@ -28,9 +28,15 @@ else
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC='agent' sh -s -
 fi
 
-# Stop k3s — it will be configured and started properly on first boot
+# Stop k3s — it will be configured and started properly on first boot via cloud-init
 sudo systemctl stop k3s* || true
 sudo systemctl disable k3s* || true
+
+# Wipe k3s runtime state so clones start with a clean identity.
+# The binary, service unit, and killall script are kept; only data/certs/etcd are removed.
+sudo rm -rf /var/lib/rancher/k3s/server /var/lib/rancher/k3s/agent
+sudo rm -rf /etc/rancher/k3s/k3s.yaml
+echo "==> k3s data wiped (binary + service unit preserved)"
 
 # ── Install k9s (amd64) ─────────────────────
 echo "==> Installing k9s"

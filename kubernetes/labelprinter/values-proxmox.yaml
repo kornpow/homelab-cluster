@@ -1,0 +1,42 @@
+# Values for labelprinter on Proxmox k3s cluster
+replicaCount: 1
+
+image:
+  repository: "190928636648.dkr.ecr.us-west-2.amazonaws.com/label-printer"
+  pullPolicy: Always
+  tag: "latest"
+
+imagePullSecrets:
+  - name: aws-registry
+
+serviceAccount:
+  create: false
+  automount: true
+  name: "default"
+
+securityContext:
+  privileged: true
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: "traefik"
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: default-stripprefix@kubernetescrd
+  hosts:
+    - host: label.samkorn.xyz
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+nodeSelector:
+  location: proxmox
+  instance: proxmox
+
+# USB printer passthrough - will be enabled once printer is connected
+volumes: []
+volumeMounts: []

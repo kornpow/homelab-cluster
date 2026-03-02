@@ -185,6 +185,12 @@ Then in VM configs, set the VLAN tag on the network device.
 
 ## 5. Create a Proxmox Cluster
 
+**Cluster Status (as of 2026-03-01):** ✅ Complete
+- **Cluster Name:** `lightningspore`
+- **Nodes:** `pve` (spore-nuc, 10.0.0.219), `pve-beelink1` (beelink1, 10.0.0.120)
+- **Quorum:** 2 nodes, 2 votes, `two_node: 1` enabled
+- **Notes:** Cluster filesystem (`pmxcfs`) syncing may require manual intervention for `/etc/pve`
+
 A Proxmox cluster lets you manage multiple hosts from one UI, live-migrate VMs, and use shared storage. **All hosts must be able to reach each other on their management IPs.**
 
 > **Important:** Clustering is optional for this project. The Terraform module targets individual nodes by name, so you can run without clustering. Clustering is useful if you want a single web UI and live migration.
@@ -570,3 +576,157 @@ kubectl get nodes --show-labels | grep proxmox
 ```
 
 All inter-node traffic (kubelet ↔ API server, flannel VXLAN, etc.) flows over Tailscale's encrypted WireGuard tunnels. Nodes don't need to be on the same LAN or have public IPs — Tailscale handles NAT traversal.
+
+---
+
+## 11. USB Device Passthrough
+
+**Status (as of 2026-03-01):** Brother QL-800 label printer connected to `pve-beelink1`
+
+### Overview
+
+Proxmox allows passing physical USB devices through to VMs. This is useful for:
+- USB printers (label printers, receipt printers)
+- USB storage devices
+- USB radio/SDR devices
+- Hardware security keys (for VM-internal use)
+
+### Find USB Devices
+
+```bash
+# List all USB devices on a Proxmox host
+lsusb
+
+# Example output:
+# Bus 001 Device 003: ID 04f9:209b Brother Industries, Ltd QL-800 Label Printer
+```
+
+### Add USB Device to VM
+
+**Method 1: USB Passthrough by ID (recommended)**
+
+```bash
+# Add Brother printer (04f9:209b) to VM 200
+qm set 200 -usb3 host=04f9:209b
+
+# The device will appear in the VM as /dev/usb/lp0
+```
+
+**Method 2: USB Passthrough by Port**
+
+```bash
+# Add device from physical USB port (e.g., port 2 on bus 3)
+qm set 200 -usb3 host=3-2
+```
+
+### Verify in VM
+
+```bash
+# Inside the VM
+ls -la /dev/usb/lp*
+# Should show: /dev/usb/lp0
+
+# Check printer status
+lpinfo -v
+```
+
+### Remove USB Device from VM
+
+```bash
+qm set 200 -delete usb3
+```
+
+### Cluster Considerations
+
+**Important:** USB passthrough only works if the VM is running on the same node as the USB device. In a cluster:
+
+1. **Option A: Move the printer** — Physically plug the USB device into the node where the VM runs
+2. **Option B: Migrate the VM** — Use live migration to move the VM to the node with the USB device
+   ```bash
+   qm migrate <vmid> <target-node> --online
+   ```
+3. **Option C: USB/IP** — Share the USB device over the network (complex, not covered here)
+
+### Current Setup
+
+- **Printer:** Brother QL-800 Label Printer (USB ID: `04f9:209b`)
+- **Connected to:** `pve-beelink1` (10.0.0.120)
+- **k3s VM:** VM 200 on `pve` (10.0.0.219)
+- **Next Step:** Either migrate VM 200 to `pve-beelink1` or move printer to `pve`
+
+---
+
+## 11. USB Device Passthrough
+
+**Status (as of 2026-03-01):** Brother QL-800 label printer connected to `pve-beelink1`
+
+### Overview
+
+Proxmox allows passing physical USB devices through to VMs. This is useful for:
+- USB printers (label printers, receipt printers)
+- USB storage devices
+- USB radio/SDR devices
+- Hardware security keys (for VM-internal use)
+
+### Find USB Devices
+
+```bash
+# List all USB devices on a Proxmox host
+lsusb
+
+# Example output:
+# Bus 001 Device 003: ID 04f9:209b Brother Industries, Ltd QL-800 Label Printer
+```
+
+### Add USB Device to VM
+
+**Method 1: USB Passthrough by ID (recommended)**
+
+```bash
+# Add Brother printer (04f9:209b) to VM 200
+qm set 200 -usb3 host=04f9:209b
+
+# The device will appear in the VM as /dev/usb/lp0
+```
+
+**Method 2: USB Passthrough by Port**
+
+```bash
+# Add device from physical USB port (e.g., port 2 on bus 3)
+qm set 200 -usb3 host=3-2
+```
+
+### Verify in VM
+
+```bash
+# Inside the VM
+ls -la /dev/usb/lp*
+# Should show: /dev/usb/lp0
+
+# Check printer status
+lpinfo -v
+```
+
+### Remove USB Device from VM
+
+```bash
+qm set 200 -delete usb3
+```
+
+### Cluster Considerations
+
+**Important:** USB passthrough only works if the VM is running on the same node as the USB device. In a cluster:
+
+1. **Option A: Move the printer** — Physically plug the USB device into the node where the VM runs
+2. **Option B: Migrate the VM** — Use live migration to move the VM to the node with the USB device
+   ```bash
+   qm migrate <vmid> <target-node> --online
+   ```
+3. **Option C: USB/IP** — Share the USB device over the network (complex, not covered here)
+
+### Current Setup
+
+- **Printer:** Brother QL-800 Label Printer (USB ID: `04f9:209b`)
+- **Connected to:** `pve-beelink1` (10.0.0.120)
+- **k3s VM:** VM 200 on `pve` (10.0.0.219)
+- **Next Step:** Either migrate VM 200 to `pve-beelink1` or move printer to `pve`
