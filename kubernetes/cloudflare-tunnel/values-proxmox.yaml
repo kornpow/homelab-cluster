@@ -23,10 +23,13 @@ resources:
 
 tunnel:
   ingress:
-    - hostname: "label.samkorn.xyz"
+    # Resume app
+    - hostname: "resume.todobest.me"
+      service: "http://resume.kornpow.svc.cluster.local:80"
+    # Label printer app
+    - hostname: "label.todobest.me"
       service: "http://labelprinter.default.svc.cluster.local:80"
-    - hostname: "samkorn.xyz"
-      service: "http://labelprinter.default.svc.cluster.local:80"
+    # Catch-all
     - service: "http_status:404"
 
 podDisruptionBudget:

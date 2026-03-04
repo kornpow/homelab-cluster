@@ -24,19 +24,24 @@ service:
 ingress:
   enabled: true
   className: "traefik"
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: default-stripprefix@kubernetescrd
   hosts:
-    - host: label.samkorn.xyz
+    - host: label.todobest.me
       paths:
         - path: /
           pathType: Prefix
   tls: []
 
-nodeSelector:
-  location: proxmox
-  instance: proxmox
+nodeSelector: {}
 
-# USB printer passthrough - will be enabled once printer is connected
-volumes: []
-volumeMounts: []
+affinity: {}
+
+# USB printer passthrough
+volumes:
+- name: usb-lp0
+  hostPath:
+    path: /dev/usb/lp0
+    type: CharDevice
+
+volumeMounts:
+- name: usb-lp0
+  mountPath: /dev/usb/lp0
