@@ -14,18 +14,26 @@ spec:
         spec:
           serviceAccountName: ecr-token-updater
           restartPolicy: Never
-          # Run on the AWS instance since it has an instanceprofile with the proper role attached
-          nodeSelector:
-            instance: internal
           dnsPolicy: "ClusterFirst"
           dnsConfig:
             nameservers:
               - "8.8.8.8"
-              - "169.254.169.253"
+              - "1.1.1.1"
           containers:
           - name: kubectl
             imagePullPolicy: Always
-            image: public.ecr.aws/i9m8a4n0/aws-kubectl:latest
+            image: alpine/k8s:1.31.4
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-ecr-creds
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-ecr-creds
+                  key: AWS_SECRET_ACCESS_KEY
             command:
             - "/bin/sh"
             - "-c"

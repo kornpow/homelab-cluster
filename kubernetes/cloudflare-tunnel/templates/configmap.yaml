@@ -18,6 +18,10 @@ data:
     # Ingress rules
     ingress:
     {{- range .Values.tunnel.ingress }}
+      {{- if .hostname }}
       - hostname: {{ .hostname | quote }}
         service: {{ .service | quote }}
+      {{- else }}
+      - service: {{ .service | quote }}
+      {{- end }}
     {{- end }}
