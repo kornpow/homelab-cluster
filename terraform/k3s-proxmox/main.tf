@@ -19,22 +19,24 @@ locals {
   # k3s install channel/version flag
   k3s_version_env = var.k3s_version != "" ? "INSTALL_K3S_VERSION='${var.k3s_version}'" : ""
 
-  # Common k3s flags
+  # Common k3s flags (includes Tailscale IP binding for proper multi-node networking)
   k3s_node_labels = "--node-label=instance=${var.node_label} --node-label=location=proxmox"
+  k3s_extra_server_args = "--node-ip=$(tailscale ip -4) --flannel-iface=tailscale0"
+  k3s_extra_agent_args = "--node-ip=$(tailscale ip -4) --flannel-iface=tailscale0"
 
   # Tailscale setup command (use list form to avoid shell quoting issues in cloud-init)
   tailscale_cmd = var.tailscale_auth_key != "" ? ["sudo", "tailscale", "up", "--authkey=${var.tailscale_auth_key}", "--accept-routes", "--accept-dns=false"] : ["echo", "Tailscale: no auth key provided, skipping auto-registration"]
 
-  # Pre-compute the k3s install command for each server node
+  # Pre-compute the k3s install command for each server node (with Tailscale IP binding)
   server_k3s_cmd = [
     for i in range(var.server_count) :
     i == 0 && local.is_standalone
-    ? "curl -sfL https://get.k3s.io | ${local.k3s_version_env} K3S_TOKEN='${local.k3s_token}' K3S_KUBECONFIG_MODE='644' INSTALL_K3S_EXEC='server --cluster-init ${local.k3s_node_labels}' sh -s -"
-    : "curl -sfL https://get.k3s.io | ${local.k3s_version_env} K3S_TOKEN='${local.k3s_token}' K3S_KUBECONFIG_MODE='644' INSTALL_K3S_EXEC='server --server=${local.k3s_server_url} ${local.k3s_node_labels}' sh -s -"
+    ? "curl -sfL https://get.k3s.io | ${local.k3s_version_env} K3S_TOKEN='${local.k3s_token}' K3S_KUBECONFIG_MODE='644' INSTALL_K3S_EXEC='server --cluster-init ${local.k3s_node_labels} ${local.k3s_extra_server_args}' sh -s -"
+    : "curl -sfL https://get.k3s.io | ${local.k3s_version_env} K3S_TOKEN='${local.k3s_token}' K3S_KUBECONFIG_MODE='644' INSTALL_K3S_EXEC='server --server=${local.k3s_server_url} ${local.k3s_node_labels} ${local.k3s_extra_server_args}' sh -s -"
   ]
 
-  # k3s install command for agent nodes
-  agent_k3s_cmd = "curl -sfL https://get.k3s.io | ${local.k3s_version_env} K3S_URL='${local.k3s_server_url}' K3S_TOKEN='${local.k3s_token}' INSTALL_K3S_EXEC='agent ${local.k3s_node_labels}' sh -s -"
+  # k3s install command for agent nodes (with Tailscale IP binding)
+  agent_k3s_cmd = "curl -sfL https://get.k3s.io | ${local.k3s_version_env} K3S_URL='${local.k3s_server_url}' K3S_TOKEN='${local.k3s_token}' INSTALL_K3S_EXEC='agent ${local.k3s_node_labels} ${local.k3s_extra_agent_args}' sh -s -"
 }
 
 # ──────────────────────────────────────────────

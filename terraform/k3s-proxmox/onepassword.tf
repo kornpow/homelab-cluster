@@ -35,6 +35,16 @@ locals {
 
   _field_map = { for f in local._all_fields : f.label => f.value }
 
-  op_api_token_id     = lookup(local._field_map, "API Token ID", "")
-  op_api_token_secret = lookup(local._field_map, "API Token Secret", "")
+  # Try multiple label formats to find the API token fields
+  op_api_token_id = (
+    lookup(local._field_map, "API Token ID", "") != "" 
+    ? lookup(local._field_map, "API Token ID", "")
+    : lookup(local._field_map, "add more/API Token ID", "")
+  )
+  
+  op_api_token_secret = (
+    lookup(local._field_map, "API Token Secret", "") != "" 
+    ? lookup(local._field_map, "API Token Secret", "")
+    : lookup(local._field_map, "add more/API Token Secret", "")
+  )
 }

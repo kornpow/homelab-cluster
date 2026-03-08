@@ -1,0 +1,60 @@
+# terraform.tfvars.example
+# Copy to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored — never commit secrets.
+
+# ── 1Password (recommended) ─────────────────
+# API tokens are fetched from 1Password at plan/apply time.
+# Requires the 1Password desktop app with "Integrate with other apps" enabled.
+# Set OP_ACCOUNT env var or uncomment below.
+# op_account    = "my.1password.com"   # or run: op account get
+op_vault      = "lightning-spore"
+op_item_title = "Proxmox - spore-nuc"    # 1Password item with "API Token ID" + "API Token Secret" fields
+
+# ── Proxmox connection ───────────────────────
+proxmox_api_url          = "https://10.0.0.219:8006/api2/json"
+proxmox_node             = "pve"
+
+# Manual token override (only needed if NOT using 1Password):
+# proxmox_api_token_id     = "root@pam!terraform-token"
+# proxmox_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# ── VM templates (built by Packer) ───────────
+server_template_id = 9000
+agent_template_id  = 9001
+
+# ── Cluster topology ────────────────────────
+server_count = 1
+agent_count  = 2
+
+# ── VM hardware ──────────────────────────────
+server_cores  = 2
+server_memory = 4096   # MB
+agent_cores   = 2
+agent_memory  = 2048   # MB
+disk_size     = 20     # GB
+
+# ── Networking ───────────────────────────────
+vm_bridge  = "vmbr0"
+vm_gateway = "192.168.1.1"
+nameserver = "1.1.1.1"
+
+# Static IPs (optional — leave empty for DHCP)
+server_ips = ["192.168.1.50/24"]
+agent_ips  = ["192.168.1.51/24", "192.168.1.52/24"]
+
+# ── SSH ──────────────────────────────────────
+ssh_public_keys = [
+  "ssh-ed25519 AAAA... your-key-comment"
+]
+
+# ── k3s ──────────────────────────────────────
+# Leave k3s_server_url empty to create a new standalone cluster.
+# Set it to join an existing cluster (e.g. your AWS k3s server via Tailscale).
+k3s_server_url = ""
+k3s_token      = ""           # Leave empty for auto-generated token (standalone mode)
+k3s_version    = ""           # Leave empty for latest stable
+node_label     = "proxmox"
+
+# ── Tailscale (for hybrid cluster networking) ─
+# Generate a reusable auth key at: https://login.tailscale.com/admin/settings/keys
+tailscale_auth_key = ""
